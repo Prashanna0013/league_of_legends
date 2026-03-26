@@ -16,6 +16,10 @@ public class Player {
     private String skillLevel;
     private String contact;
 
+    // Needed for auction/bidding
+    @Column(name = "base_price", nullable = false)
+    private int basePrice;
+
     public Player() {
     }
 
@@ -26,6 +30,7 @@ public class Player {
         this.sport = sport;
         this.skillLevel = skillLevel;
         this.contact = contact;
+        this.basePrice = 0;
     }
 
     public Long getId() {
@@ -74,5 +79,13 @@ public class Player {
 
     public void setContact(String contact) {
         this.contact = contact;
+    }
+
+    public int getBasePrice() {
+        return basePrice;
+    }
+
+    public void setBasePrice(int basePrice) {
+        this.basePrice = basePrice;
     }
 }

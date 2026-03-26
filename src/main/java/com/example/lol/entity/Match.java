@@ -16,9 +16,23 @@ public class Match {
 
     private Long teamA;
     private Long teamB;
+
+    @Column(name = "game_id")
+    private Long gameId;
     private String venue;
+
+    @Column(name = "date_time", nullable = false)
     private LocalDateTime matchDate;
     private String status; // Scheduled / Completed
+
+    @Column(name = "team_a_total", nullable = false)
+    private int teamATotal = 0;
+
+    @Column(name = "team_b_total", nullable = false)
+    private int teamBTotal = 0;
+
+    @Column(name = "winner_team_id")
+    private Long winnerTeamId;
 
     public Match() {
     }
@@ -29,6 +43,38 @@ public class Match {
         this.venue = venue;
         this.matchDate = matchDate;
         this.status = status;
+    }
+
+    public Long getGameId() {
+        return gameId;
+    }
+
+    public void setGameId(Long gameId) {
+        this.gameId = gameId;
+    }
+
+    public int getTeamATotal() {
+        return teamATotal;
+    }
+
+    public void setTeamATotal(int teamATotal) {
+        this.teamATotal = teamATotal;
+    }
+
+    public int getTeamBTotal() {
+        return teamBTotal;
+    }
+
+    public void setTeamBTotal(int teamBTotal) {
+        this.teamBTotal = teamBTotal;
+    }
+
+    public Long getWinnerTeamId() {
+        return winnerTeamId;
+    }
+
+    public void setWinnerTeamId(Long winnerTeamId) {
+        this.winnerTeamId = winnerTeamId;
     }
 
     public Long getId() {
