@@ -12,6 +12,16 @@ public class Team {
     private String name;
     private String owner;
 
+    // New fields required by auctions + RBAC team ownership
+    @Column(name = "owner_id")
+    private Long ownerId;
+
+    @Column(nullable = false)
+    private int budget;
+
+    @Column(name = "is_locked", nullable = false)
+    private boolean isLocked = false;
+
     public Team() {
     }
 
@@ -19,6 +29,8 @@ public class Team {
         this.id = id;
         this.name = name;
         this.owner = owner;
+        this.budget = 0;
+        this.isLocked = false;
     }
 
     public Long getId() {
@@ -43,5 +55,29 @@ public class Team {
 
     public void setOwner(String owner) {
         this.owner = owner;
+    }
+
+    public Long getOwnerId() {
+        return ownerId;
+    }
+
+    public void setOwnerId(Long ownerId) {
+        this.ownerId = ownerId;
+    }
+
+    public int getBudget() {
+        return budget;
+    }
+
+    public void setBudget(int budget) {
+        this.budget = budget;
+    }
+
+    public boolean isLocked() {
+        return isLocked;
+    }
+
+    public void setLocked(boolean locked) {
+        isLocked = locked;
     }
 }

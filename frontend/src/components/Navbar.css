@@ -12,6 +12,11 @@
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
   z-index: 1000;
 }
+.nav-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
 
 .navbar-brand {
   font-size: 24px;
@@ -29,10 +34,11 @@
 
 .nav-links {
   display: flex;
-  gap: 30px;
+  gap: 10px;
   list-style: none;
   margin: 0;
   padding: 0;
+  flex-wrap: wrap;
 }
 
 .nav-btn {
@@ -61,6 +67,17 @@
   background: rgba(255, 255, 255, 0.3);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
+.user-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #fff;
+  font-weight: 700;
+}
+.logout-btn {
+  background: rgba(255, 80, 80, 0.25);
+  border-color: rgba(255, 120, 120, 0.6);
+}
 
 @media (max-width: 768px) {
   .navbar {
@@ -73,6 +90,9 @@
 
   .nav-links {
     gap: 10px;
+  }
+  .user-chip {
+    font-size: 12px;
   }
 
   .nav-btn {

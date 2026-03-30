@@ -7,5 +7,6 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface LeaderboardRepository extends JpaRepository<Leaderboard, Long> {
 
+    java.util.Optional<Leaderboard> findByTeamId(Long teamId);
 }
 
