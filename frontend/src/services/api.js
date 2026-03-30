@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:8080/api';
+const API_BASE_URL = 'http://localhost:8080';
+const LEGACY_API_BASE_URL = 'http://localhost:8080/api';
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -9,45 +10,72 @@ const apiClient = axios.create({
   },
 });
 
-// Players API
+const legacyClient = axios.create({
+  baseURL: LEGACY_API_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+let authToken = localStorage.getItem('slm_token') || null;
+
+export const setAuthToken = (token) => {
+  authToken = token || null;
+  if (authToken) {
+    localStorage.setItem('slm_token', authToken);
+  } else {
+    localStorage.removeItem('slm_token');
+  }
+};
+
+const attachAuth = (config) => {
+  if (authToken) {
+    config.headers = config.headers || {};
+    config.headers.Authorization = `Bearer ${authToken}`;
+  }
+  return config;
+};
+
+apiClient.interceptors.request.use(attachAuth);
+legacyClient.interceptors.request.use(attachAuth);
+
+export const authAPI = {
+  register: (data) => apiClient.post('/register', data),
+  login: (data) => apiClient.post('/login', data),
+};
+
+// Legacy players endpoints kept for compatibility
 export const playersAPI = {
-  getAll: () => apiClient.get('/player/get'),
-  add: (data) => apiClient.post('/player/add', data),
-  delete: (id) => apiClient.delete(`/player/delete/${id}`),
-  getById: (id) => apiClient.get(`/player/get/${id}`),
+  getAll: () => legacyClient.get('/player/get'),
+  add: (data) => legacyClient.post('/player/add', data),
 };
 
-// Teams API
 export const teamsAPI = {
-  getAll: () => apiClient.get('/team/get-team'),
-  add: (data) => apiClient.post('/team/add-team', data),
-  delete: (id) => apiClient.delete(`/team/delete/${id}`),
-  getById: (id) => apiClient.get(`/team/get-id/${id}`),
-  getByName: (name) => apiClient.get(`/team/get-name/${name}`),
+  create: (data) => apiClient.post('/teams', data),
+  assignPlayer: (data) => apiClient.post('/auction/assign', data),
+  lock: (teamId) => apiClient.post(`/teams/${teamId}/lock`),
+  getPlayers: (teamId) => apiClient.get(`/teams/${teamId}/players`),
 };
 
-// Matches API
+export const gamesAPI = {
+  create: (data) => apiClient.post('/games', data),
+  upsertRule: (data) => apiClient.post('/score-rules', data),
+  getRules: (gameId) => apiClient.get(`/games/${gameId}/rules`),
+};
+
 export const matchesAPI = {
-  getAll: () => apiClient.get('/match/get'),
-  add: (data) => apiClient.post('/match/add', data),
-  delete: (id) => apiClient.delete(`/match/delete/${id}`),
-  update: (id, data) => apiClient.put(`/match/update/${id}`, data),
-  getById: (id) => apiClient.get(`/match/get/${id}`),
+  getAll: () => apiClient.get('/matches'),
+  create: (data) => apiClient.post('/matches', data),
+  score: (data) => apiClient.post('/match-score', data),
 };
 
-// Leaderboard API
 export const leaderboardAPI = {
-  getAll: () => apiClient.get('/leaderboard/get'),
-  add: (data) => apiClient.post('/leaderboard/add', data),
-  delete: (id) => apiClient.delete(`/leaderboard/delete/${id}`),
-  update: (id, data) => apiClient.put(`/leaderboard/update/${id}`, data),
-  getById: (id) => apiClient.get(`/leaderboard/get/${id}`),
-  getByTeamId: (teamId) => apiClient.get(`/leaderboard/get/team/${teamId}`),
+  getAll: () => apiClient.get('/leaderboard'),
 };
 
-// Team Player API
-export const teamPlayerAPI = {
-  assign: (data) => apiClient.post('/teamplayer/assign', data),
+export const analyticsAPI = {
+  getPlayerStats: () => apiClient.get('/player-stats'),
+  getTopPerformers: (limit = 5) => apiClient.get(`/top-performers?limit=${limit}`),
 };
 
 export default apiClient;
