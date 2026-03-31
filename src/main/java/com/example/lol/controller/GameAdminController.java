@@ -32,6 +32,13 @@ public class GameAdminController {
         return gameAdminService.createGame(role, request.name);
     }
 
+    @GetMapping("/games")
+    public List<Game> getAllGames() {
+        // Intentionally available to any authenticated role; creating/updating remains ADMIN-only.
+        currentUserService.getCurrentRole();
+        return gameAdminService.getAllGames();
+    }
+
     @GetMapping("/games/{id}/rules")
     public List<ScoreRuleResponse> getRules(@PathVariable("id") Long gameId) {
         List<ScoreRule> rules = gameAdminService.getRulesByGameId(gameId);

@@ -1,13 +1,22 @@
 .app {
   min-height: 100vh;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-  padding-top: 80px;
+  padding-top: 0;
+}
+
+.app-shell {
+  display: flex;
+  min-height: 100vh;
+}
+
+.main {
+  flex: 1;
+  margin-left: 280px;
 }
 
 .app-container {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 40px 20px;
+  padding: 28px 20px 40px;
 }
 .auth-only {
   padding-top: 0;
@@ -48,6 +57,13 @@
 @media (max-width: 768px) {
   .app-container {
     padding: 20px 10px;
+  }
+}
+
+@media (max-width: 900px) {
+  .main {
+    margin-left: 0;
+    padding-top: 64px;
   }
 }
 

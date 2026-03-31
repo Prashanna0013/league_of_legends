@@ -2,12 +2,13 @@ import React, { useEffect, useMemo, useState } from 'react';
 import '@fortawesome/fontawesome-free/css/all.min.css';
 import './App.css';
 import './components/SharedStyles.css';
-import Navbar from './components/Navbar';
+import Sidebar from './components/Sidebar';
 import Alert from './components/Alert';
 import {
   analyticsAPI,
   authAPI,
   gamesAPI,
+  legacyTeamsAPI,
   leaderboardAPI,
   matchesAPI,
   playersAPI,
@@ -16,7 +17,7 @@ import {
 } from './services/api';
 
 function App() {
-  const [activeSection, setActiveSection] = useState('players');
+  const [activeSection, setActiveSection] = useState('dashboard');
   const [alert, setAlert] = useState(null);
   const [auth, setAuth] = useState({
     token: localStorage.getItem('slm_token') || '',
@@ -61,6 +62,9 @@ function App() {
     suggestNextSlot: true,
   });
   const [matches, setMatches] = useState([]);
+  const [games, setGames] = useState([]);
+  const [teams, setTeams] = useState([]);
+  const [matchFilters, setMatchFilters] = useState({ gameId: '', status: '' });
 
   const [scoreForm, setScoreForm] = useState({
     matchId: '',
@@ -84,21 +88,31 @@ function App() {
   const navItems = useMemo(() => {
     if (!loggedIn) return [];
     const base = [
+      { id: 'dashboard', label: 'Dashboard', icon: 'fas fa-grid-2' },
       { id: 'matches', label: 'Matches', icon: 'fas fa-futbol' },
       { id: 'leaderboard', label: 'Leaderboard', icon: 'fas fa-ranking-star' },
       { id: 'analytics', label: 'Analytics', icon: 'fas fa-chart-line' },
     ];
     if (auth.role === 'ADMIN') {
       return [
+        { id: 'dashboard', label: 'Dashboard', icon: 'fas fa-grid-2' },
         { id: 'players', label: 'Players', icon: 'fas fa-users' },
         { id: 'teams', label: 'Teams/Auction', icon: 'fas fa-shield-alt' },
         { id: 'games', label: 'Games/Rules', icon: 'fas fa-gamepad' },
-        ...base,
+        { id: 'matches', label: 'Matches', icon: 'fas fa-futbol' },
+        { id: 'leaderboard', label: 'Leaderboard', icon: 'fas fa-ranking-star' },
+        { id: 'analytics', label: 'Analytics', icon: 'fas fa-chart-line' },
         { id: 'scoring', label: 'Match Scoring', icon: 'fas fa-calculator' },
       ];
     }
     if (auth.role === 'TEAM_OWNER') {
-      return [{ id: 'teams', label: 'Teams/Auction', icon: 'fas fa-shield-alt' }, ...base];
+      return [
+        { id: 'dashboard', label: 'Dashboard', icon: 'fas fa-grid-2' },
+        { id: 'teams', label: 'Teams/Auction', icon: 'fas fa-shield-alt' },
+        { id: 'matches', label: 'Matches', icon: 'fas fa-futbol' },
+        { id: 'leaderboard', label: 'Leaderboard', icon: 'fas fa-ranking-star' },
+        { id: 'analytics', label: 'Analytics', icon: 'fas fa-chart-line' },
+      ];
     }
     return base;
   }, [loggedIn, auth.role]);
@@ -279,6 +293,36 @@ function App() {
     }
   };
 
+  const loadGames = async () => {
+    try {
+      const response = await gamesAPI.getAll();
+      setGames(Array.isArray(response.data) ? response.data : []);
+    } catch (error) {
+      setGames([]);
+    }
+  };
+
+  const loadTeams = async () => {
+    try {
+      const response = await legacyTeamsAPI.getAll();
+      // legacy endpoint returns Optional<List<Team>>; tolerate both {present, empty} styles.
+      const data = response.data;
+      if (Array.isArray(data)) {
+        setTeams(data);
+      } else if (Array.isArray(data?.value)) {
+        setTeams(data.value);
+      } else if (Array.isArray(data?.orElse)) {
+        setTeams(data.orElse);
+      } else if (Array.isArray(data?.teams)) {
+        setTeams(data.teams);
+      } else {
+        setTeams([]);
+      }
+    } catch (error) {
+      setTeams([]);
+    }
+  };
+
   const scheduleMatch = async (e) => {
     e.preventDefault();
     try {
@@ -368,17 +412,83 @@ function App() {
     loadMatches();
     loadLeaderboard();
     loadAnalytics();
+    loadGames();
+    loadTeams();
     if (auth.role === 'ADMIN') {
       loadPlayers();
     }
   }, [loggedIn, auth.role]);
 
+  const teamNameById = useMemo(() => {
+    const map = new Map();
+    teams.forEach((t) => map.set(Number(t.id), t.name));
+    return map;
+  }, [teams]);
+
+  const gameNameById = useMemo(() => {
+    const map = new Map();
+    games.forEach((g) => map.set(Number(g.id), g.name));
+    return map;
+  }, [games]);
+
   const renderSection = () => {
     switch (activeSection) {
+      case 'dashboard':
+        return (
+          <div className="section">
+            <div className="section-title"><i className="fas fa-grid-2"></i><h1>Dashboard</h1></div>
+            <div className="card">
+              <h3>Overview</h3>
+              <div className="form-grid">
+                <div className="card" style={{ margin: 0, background: 'var(--surface-2)' }}>
+                  <h3 style={{ marginBottom: 8 }}>Matches</h3>
+                  <p style={{ margin: 0, color: 'var(--text-muted)' }}>{matches.length} scheduled/recorded</p>
+                </div>
+                <div className="card" style={{ margin: 0, background: 'var(--surface-2)' }}>
+                  <h3 style={{ marginBottom: 8 }}>Games</h3>
+                  <p style={{ margin: 0, color: 'var(--text-muted)' }}>{games.length} configured</p>
+                </div>
+                <div className="card" style={{ margin: 0, background: 'var(--surface-2)' }}>
+                  <h3 style={{ marginBottom: 8 }}>Teams</h3>
+                  <p style={{ margin: 0, color: 'var(--text-muted)' }}>{teams.length} registered</p>
+                </div>
+                <div className="card" style={{ margin: 0, background: 'var(--surface-2)' }}>
+                  <h3 style={{ marginBottom: 8 }}>Top performers</h3>
+                  <p style={{ margin: 0, color: 'var(--text-muted)' }}>{topPerformers.length} listed</p>
+                </div>
+              </div>
+              <div className="btn-group" style={{ marginTop: 18 }}>
+                <button className="btn btn-secondary" type="button" onClick={() => { loadMatches(); loadGames(); loadTeams(); loadLeaderboard(); loadAnalytics(); }}>
+                  <i className="fas fa-rotate"></i>Refresh data
+                </button>
+                {auth.role === 'ADMIN' && (
+                  <button className="btn btn-primary" type="button" onClick={() => setActiveSection('matches')}>
+                    <i className="fas fa-calendar-plus"></i>Schedule a match
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        );
       case 'players':
         return (
           <div className="section">
             <div className="section-title"><i className="fas fa-users"></i><h1>Players</h1></div>
+            <div className="card" style={{ background: 'var(--surface-2)' }}>
+              <h3>Players overview</h3>
+              <div className="form-grid">
+                <div className="card" style={{ margin: 0 }}>
+                  <h3 style={{ marginBottom: 8 }}>Total players</h3>
+                  <p style={{ margin: 0, color: 'var(--text-muted)' }}>{players.length}</p>
+                </div>
+                <div className="card" style={{ margin: 0 }}>
+                  <h3 style={{ marginBottom: 8 }}>Quick actions</h3>
+                  <div className="btn-group" style={{ marginTop: 0 }}>
+                    <button className="btn btn-secondary" type="button" onClick={loadPlayers}><i className="fas fa-rotate"></i>Refresh</button>
+                  </div>
+                </div>
+              </div>
+            </div>
             <div className="card">
               <h3>Add Player</h3>
               <form onSubmit={addPlayer} className="form-grid">
@@ -411,6 +521,21 @@ function App() {
         return (
           <div className="section">
             <div className="section-title"><i className="fas fa-shield-alt"></i><h1>Team + Auction</h1></div>
+            <div className="card" style={{ background: 'var(--surface-2)' }}>
+              <h3>Teams overview</h3>
+              <div className="form-grid">
+                <div className="card" style={{ margin: 0 }}>
+                  <h3 style={{ marginBottom: 8 }}>Total teams</h3>
+                  <p style={{ margin: 0, color: 'var(--text-muted)' }}>{teams.length}</p>
+                </div>
+                <div className="card" style={{ margin: 0 }}>
+                  <h3 style={{ marginBottom: 8 }}>Quick actions</h3>
+                  <div className="btn-group" style={{ marginTop: 0 }}>
+                    <button className="btn btn-secondary" type="button" onClick={loadTeams}><i className="fas fa-rotate"></i>Refresh</button>
+                  </div>
+                </div>
+              </div>
+            </div>
             {auth.role === 'ADMIN' && (
               <div className="card">
                 <h3>Create Team (Admin)</h3>
@@ -455,6 +580,21 @@ function App() {
         return (
           <div className="section">
             <div className="section-title"><i className="fas fa-gamepad"></i><h1>Games & Score Rules</h1></div>
+            <div className="card" style={{ background: 'var(--surface-2)' }}>
+              <h3>Games overview</h3>
+              <div className="form-grid">
+                <div className="card" style={{ margin: 0 }}>
+                  <h3 style={{ marginBottom: 8 }}>Total games</h3>
+                  <p style={{ margin: 0, color: 'var(--text-muted)' }}>{games.length}</p>
+                </div>
+                <div className="card" style={{ margin: 0 }}>
+                  <h3 style={{ marginBottom: 8 }}>Quick actions</h3>
+                  <div className="btn-group" style={{ marginTop: 0 }}>
+                    <button className="btn btn-secondary" type="button" onClick={loadGames}><i className="fas fa-rotate"></i>Refresh</button>
+                  </div>
+                </div>
+              </div>
+            </div>
             <div className="card">
               <h3>Create Game</h3>
               <form onSubmit={createGame} className="form-grid">
@@ -491,13 +631,48 @@ function App() {
         return (
           <div className="section">
             <div className="section-title"><i className="fas fa-futbol"></i><h1>Matches</h1></div>
+            <div className="card" style={{ background: 'var(--surface-2)' }}>
+              <h3>Matches overview</h3>
+              <div className="form-grid">
+                <div className="card" style={{ margin: 0 }}>
+                  <h3 style={{ marginBottom: 8 }}>Total matches</h3>
+                  <p style={{ margin: 0, color: 'var(--text-muted)' }}>{matches.length}</p>
+                </div>
+                <div className="card" style={{ margin: 0 }}>
+                  <h3 style={{ marginBottom: 8 }}>Quick actions</h3>
+                  <div className="btn-group" style={{ marginTop: 0 }}>
+                    <button className="btn btn-secondary" type="button" onClick={() => { loadMatches(); loadGames(); loadTeams(); }}>
+                      <i className="fas fa-rotate"></i>Refresh
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
             {auth.role === 'ADMIN' && (
               <div className="card">
                 <h3>Schedule Match</h3>
                 <form onSubmit={scheduleMatch} className="form-grid">
-                  <div className="form-group"><label>Team A ID</label><input type="number" value={matchForm.teamAId} onChange={(e) => setMatchForm({ ...matchForm, teamAId: e.target.value })} required /></div>
-                  <div className="form-group"><label>Team B ID</label><input type="number" value={matchForm.teamBId} onChange={(e) => setMatchForm({ ...matchForm, teamBId: e.target.value })} required /></div>
-                  <div className="form-group"><label>Game ID</label><input type="number" value={matchForm.gameId} onChange={(e) => setMatchForm({ ...matchForm, gameId: e.target.value })} required /></div>
+                  <div className="form-group">
+                    <label>Team A</label>
+                    <select value={matchForm.teamAId} onChange={(e) => setMatchForm({ ...matchForm, teamAId: e.target.value })} required>
+                      <option value="">Select team</option>
+                      {teams.map((t) => <option key={t.id} value={t.id}>{t.name} (ID {t.id})</option>)}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>Team B</label>
+                    <select value={matchForm.teamBId} onChange={(e) => setMatchForm({ ...matchForm, teamBId: e.target.value })} required>
+                      <option value="">Select team</option>
+                      {teams.map((t) => <option key={t.id} value={t.id}>{t.name} (ID {t.id})</option>)}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>Game</label>
+                    <select value={matchForm.gameId} onChange={(e) => setMatchForm({ ...matchForm, gameId: e.target.value })} required>
+                      <option value="">Select game</option>
+                      {games.map((g) => <option key={g.id} value={g.id}>{g.name} (ID {g.id})</option>)}
+                    </select>
+                  </div>
                   <div className="form-group"><label>Venue</label><input value={matchForm.venue} onChange={(e) => setMatchForm({ ...matchForm, venue: e.target.value })} required /></div>
                   <div className="form-group"><label>Date/Time</label><input type="datetime-local" value={matchForm.dateTime} onChange={(e) => setMatchForm({ ...matchForm, dateTime: e.target.value })} required /></div>
                   <div className="form-group"><label>Suggest Next Slot</label><select value={matchForm.suggestNextSlot ? 'true' : 'false'} onChange={(e) => setMatchForm({ ...matchForm, suggestNextSlot: e.target.value === 'true' })}><option value="true">Yes</option><option value="false">No</option></select></div>
@@ -507,21 +682,47 @@ function App() {
             )}
             <div className="card">
               <h3>Match List</h3>
-              <div className="btn-group"><button className="btn btn-secondary" type="button" onClick={loadMatches}>Refresh</button></div>
+              <div className="form-grid" style={{ marginBottom: 6 }}>
+                <div className="form-group">
+                  <label>Game</label>
+                  <select value={matchFilters.gameId} onChange={(e) => setMatchFilters((p) => ({ ...p, gameId: e.target.value }))}>
+                    <option value="">All games</option>
+                    {games.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Status</label>
+                  <select value={matchFilters.status} onChange={(e) => setMatchFilters((p) => ({ ...p, status: e.target.value }))}>
+                    <option value="">All</option>
+                    <option value="SCHEDULED">Scheduled</option>
+                    <option value="COMPLETED">Completed</option>
+                  </select>
+                </div>
+                <div className="btn-group form-full" style={{ marginTop: 0 }}>
+                  <button className="btn btn-secondary" type="button" onClick={() => { loadMatches(); loadGames(); loadTeams(); }}>
+                    <i className="fas fa-rotate"></i>Refresh
+                  </button>
+                </div>
+              </div>
               <div className="table-responsive">
                 <table>
                   <thead><tr><th>ID</th><th>Teams</th><th>Game</th><th>Venue</th><th>Date</th><th>Status</th><th>Totals</th><th>Winner</th></tr></thead>
                   <tbody>
-                    {matches.map((m) => (
+                    {matches
+                      .filter((m) => (matchFilters.gameId ? String(m.gameId) === String(matchFilters.gameId) : true))
+                      .filter((m) => (matchFilters.status ? String(m.status) === String(matchFilters.status) : true))
+                      .map((m) => (
                       <tr key={m.id}>
                         <td>{m.id}</td>
-                        <td>{m.teamAId ?? m.teamA} vs {m.teamBId ?? m.teamB}</td>
-                        <td>{m.gameId ?? '-'}</td>
+                        <td>
+                          {teamNameById.get(Number(m.teamAId)) || m.teamAId} vs {teamNameById.get(Number(m.teamBId)) || m.teamBId}
+                        </td>
+                        <td>{gameNameById.get(Number(m.gameId)) || m.gameId || '-'}</td>
                         <td>{m.venue}</td>
                         <td>{m.dateTime || m.matchDate}</td>
                         <td>{m.status}</td>
                         <td>{m.teamATotal ?? 0} - {m.teamBTotal ?? 0}</td>
-                        <td>{m.winnerTeamId ?? '-'}</td>
+                        <td>{m.winnerTeamId ? (teamNameById.get(Number(m.winnerTeamId)) || m.winnerTeamId) : '-'}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -609,17 +810,54 @@ function App() {
       <div className="app auth-only">
         <div className="app-container auth-container">
           {alert && <Alert type={alert.type} message={alert.message} onClose={() => setAlert(null)} />}
-          <div className="card">
-            <h2>{authForm.mode === 'login' ? 'Login' : 'Register'}</h2>
+          <div className="card auth-card">
+            <div className="auth-header">
+              <div className="auth-badge" aria-hidden="true"><i className="fas fa-leaf"></i></div>
+              <div>
+                <h2 style={{ margin: 0 }}>{authForm.mode === 'login' ? 'Welcome back' : 'Create your account'}</h2>
+                <p style={{ margin: '6px 0 0', color: 'var(--text-muted)' }}>
+                  {authForm.mode === 'login' ? 'Sign in to manage your league.' : 'Register to join and participate.'}
+                </p>
+              </div>
+            </div>
+
             <form onSubmit={handleAuth} className="form-grid">
               {authForm.mode === 'register' && (
                 <>
-                  <div className="form-group"><label>Name</label><input name="name" value={authForm.name} onChange={onAuthInput} required /></div>
-                  <div className="form-group"><label>Role</label><select name="role" value={authForm.role} onChange={onAuthInput}><option value="ADMIN">ADMIN</option><option value="TEAM_OWNER">TEAM_OWNER</option><option value="PLAYER">PLAYER</option></select></div>
+                  <div className="form-group">
+                    <label>Name</label>
+                    <div className="input-with-icon">
+                      <i className="fas fa-user"></i>
+                      <input name="name" value={authForm.name} onChange={onAuthInput} required placeholder="Your name" />
+                    </div>
+                  </div>
+                  <div className="form-group">
+                    <label>Role</label>
+                    <div className="input-with-icon">
+                      <i className="fas fa-user-tag"></i>
+                      <select name="role" value={authForm.role} onChange={onAuthInput}>
+                        <option value="ADMIN">Admin</option>
+                        <option value="TEAM_OWNER">Team Owner</option>
+                        <option value="PLAYER">Player</option>
+                      </select>
+                    </div>
+                  </div>
                 </>
               )}
-              <div className="form-group"><label>Email</label><input type="email" name="email" value={authForm.email} onChange={onAuthInput} required /></div>
-              <div className="form-group"><label>Password</label><input type="password" name="password" value={authForm.password} onChange={onAuthInput} required /></div>
+              <div className="form-group">
+                <label>Email</label>
+                <div className="input-with-icon">
+                  <i className="fas fa-envelope"></i>
+                  <input type="email" name="email" value={authForm.email} onChange={onAuthInput} required placeholder="name@company.com" />
+                </div>
+              </div>
+              <div className="form-group">
+                <label>Password</label>
+                <div className="input-with-icon">
+                  <i className="fas fa-lock"></i>
+                  <input type="password" name="password" value={authForm.password} onChange={onAuthInput} required placeholder="••••••••" />
+                </div>
+              </div>
               <div className="btn-group form-full">
                 <button type="submit" className="btn btn-primary">{authForm.mode === 'login' ? 'Login' : 'Register'}</button>
                 <button
@@ -639,16 +877,20 @@ function App() {
 
   return (
     <div className="app">
-      <Navbar
-        activeSection={activeSection}
-        setActiveSection={setActiveSection}
-        navItems={navItems}
-        role={auth.role}
-        onLogout={logout}
-      />
-      <div className="app-container">
-        {alert && <Alert type={alert.type} message={alert.message} onClose={() => setAlert(null)} />}
-        {renderSection()}
+      <div className="app-shell">
+        <Sidebar
+          activeSection={activeSection}
+          setActiveSection={setActiveSection}
+          navItems={navItems}
+          role={auth.role}
+          onLogout={logout}
+        />
+        <main className="main">
+          <div className="app-container">
+            {alert && <Alert type={alert.type} message={alert.message} onClose={() => setAlert(null)} />}
+            {renderSection()}
+          </div>
+        </main>
       </div>
     </div>
   );

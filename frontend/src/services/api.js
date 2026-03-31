@@ -59,6 +59,7 @@ export const teamsAPI = {
 
 export const gamesAPI = {
   create: (data) => apiClient.post('/games', data),
+  getAll: () => apiClient.get('/games'),
   upsertRule: (data) => apiClient.post('/score-rules', data),
   getRules: (gameId) => apiClient.get(`/games/${gameId}/rules`),
 };
@@ -67,6 +68,11 @@ export const matchesAPI = {
   getAll: () => apiClient.get('/matches'),
   create: (data) => apiClient.post('/matches', data),
   score: (data) => apiClient.post('/match-score', data),
+};
+
+// Legacy teams endpoints kept for compatibility
+export const legacyTeamsAPI = {
+  getAll: () => legacyClient.get('/team/get-team'),
 };
 
 export const leaderboardAPI = {
